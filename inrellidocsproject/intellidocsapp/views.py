@@ -22,7 +22,7 @@ from langchain_community.document_loaders import UnstructuredURLLoader
 from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQAWithSourcesChain
 from langchain.agents import initialize_agent, Tool
-from langchain.tools import DuckDuckGoSearchRun
+from langchain_community.tools import DuckDuckGoSearchRun
 from rest_framework.parsers import JSONParser
 
 
