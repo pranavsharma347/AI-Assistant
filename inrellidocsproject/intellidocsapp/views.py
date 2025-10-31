@@ -214,15 +214,8 @@ class MultiUrls(APIView):
             new_vs = FAISS.load_local("langchain_faiss_index", emb, allow_dangerous_deserialization=True)#Now load embinng we already saved
             llm=init_chat_model("gemini-2.5-flash", model_provider="google_genai")
             chain=RetrievalQAWithSourcesChain.from_llm(llm=llm,retriever=new_vs.as_retriever())
-
             parser=StrOutputParser()
-
-
-            answer=chain.invoke({"question":question})
-
-            answer|=answer
-
-
+            answer=chain.invoke({"question":question})``
             return Response({"answer":answer}, status=status.HTTP_200_OK)
     
         return Response({"answer":"Question related answer is not found please try again"},status=status.HTTP_200_OK)
@@ -317,6 +310,5 @@ class AIGenerator(APIView):
             output=chain.invoke(question)
             return Response({"result":output},status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
             

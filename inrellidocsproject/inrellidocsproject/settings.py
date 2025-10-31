@@ -84,6 +84,12 @@ CORS_ALLOWED_ORIGINS = [
     "https://master.d2354zwtwk5j2x.amplifyapp.com/"
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://ec2-13-48-104-182.eu-north-1.compute.amazonaws.com',
+    'https://master.d2354zwtwk5j2x.amplifyapp.com'
+]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 APPEND_SLASH=False
