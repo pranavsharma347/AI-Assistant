@@ -290,33 +290,7 @@ class DocsAiAgent(APIView):
                                      verbose=True  # show what the agent is doing
                                      )
 
-            # prompt = PromptTemplate(
-            #     template="""
-            #     You are a helpful assistant.
-            #     Answer ONLY from the provided transcript context.
-            #     If the context is insufficient, just say you don't know.
-
-            #     {context}
-            #     Question: {question}
-            #     """,
-            #     input_variables = ['context', 'question']
-            # )
-            # parser=StrOutputParser()
-
-
-
-
-            # question= "What is data structure and explain its types?"
-            # retrieved_docs    = retriever.invoke(user_question)
-            # context_text = "\n\n".join(doc.page_content for doc in retrieved_docs)
-
-            # filled_prompt = prompt.format(context=context_text,question=user_question)
-
-            # chain=prompt|llm|parser
-            # answer = chain.invoke({"context": context_text,
-            #                         "question":  user_question
-            #                         })
-
+            
             raw_output = agent.invoke({"input": user_question})
             # answer = parser.invoke(raw_output["output"])
             answer = raw_output["output"]
@@ -336,6 +310,7 @@ class AIGenerator(APIView):
         serializer=AIGeneratorSerializer(data=request.data)
         if serializer.is_valid():
             question=serializer.validated_data['question']
+            print("serialzer",serializer)
             llm = init_chat_model("gemini-2.5-flash", model_provider="google_genai")
             parser=StrOutputParser()
             chain=llm|parser

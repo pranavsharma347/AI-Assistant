@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-8(wk8smyp#+!0+5!um8x^*41ryw9jvz-m*)oo0s3=#d7$fdsk0
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["ec2-13-48-104-182.eu-north-1.compute.amazonaws.com","localhost","https://master.d2354zwtwk5j2x.amplifyapp.com/"]
 
 
 # Application definition
@@ -81,6 +81,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5174",   # React or Vue dev server
+    "https://master.d2354zwtwk5j2x.amplifyapp.com/"
 ]
 
 
@@ -131,7 +132,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
