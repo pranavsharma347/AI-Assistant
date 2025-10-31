@@ -26,9 +26,11 @@ SECRET_KEY = 'django-insecure-8(wk8smyp#+!0+5!um8x^*41ryw9jvz-m*)oo0s3=#d7$fdsk0
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["ec2-13-48-104-182.eu-north-1.compute.amazonaws.com","localhost","https://master.d2354zwtwk5j2x.amplifyapp.com/"]
-
-
+ALLOWED_HOSTS = [
+    "ec2-13-48-104-182.eu-north-1.compute.amazonaws.com",
+    "localhost",
+    "master.d2354zwtwk5j2x.amplifyapp.com"
+]
 # Application definition
 
 INSTALLED_APPS = [
@@ -77,24 +79,21 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'inrellidocsproject.wsgi.application'
 
-CORS_ALLOW_ALL_ORIGINS = True
-
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5174",   # React or Vue dev server
-    "https://master.d2354zwtwk5j2x.amplifyapp.com/"
+    "http://localhost:5174",   # Local frontend
+    "https://master.d2354zwtwk5j2x.amplifyapp.com"
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://ec2-13-48-104-182.eu-north-1.compute.amazonaws.com',
-    'https://master.d2354zwtwk5j2x.amplifyapp.com'
+    "https://ec2-13-48-104-182.eu-north-1.compute.amazonaws.com",
+    "https://master.d2354zwtwk5j2x.amplifyapp.com"
 ]
-
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
 
 APPEND_SLASH=False
 # Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+# https://docs.djangoproject.com/en/4.2/ref/settings/#databases```````````````````````````````
 
 DATABASES = {
     'default': {
