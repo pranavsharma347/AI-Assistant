@@ -27,11 +27,12 @@ SECRET_KEY = 'django-insecure-8(wk8smyp#+!0+5!um8x^*41ryw9jvz-m*)oo0s3=#d7$fdsk0
 DEBUG = False
 
 ALLOWED_HOSTS = [
-    "ec2-13-48-104-182.eu-north-1.compute.amazonaws.com",
     "localhost",
-    "master.d2354zwtwk5j2x.amplifyapp.com"
-]
-# Application definition
+    "127.0.0.1",
+    "ec2-13-48-104-182.eu-north-1.compute.amazonaws.com",
+    "master.d2354zwtwk5j2x.amplifyapp.com",
+    "geniehub.duckdns.org"
+]# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -80,15 +81,21 @@ TEMPLATES = [
 WSGI_APPLICATION = 'inrellidocsproject.wsgi.application'
 
 CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5174",   # Local frontend
-    "https://master.d2354zwtwk5j2x.amplifyapp.com"
+
+
+CCORS_ALLOWED_ORIGINS = [
+    "http://localhost:5174",
+    "https://master.d2354zwtwk5j2x.amplifyapp.com",
+    "https://geniehub.duckdns.org"
 ]
+
 
 CSRF_TRUSTED_ORIGINS = [
     "https://ec2-13-48-104-182.eu-north-1.compute.amazonaws.com",
-    "https://master.d2354zwtwk5j2x.amplifyapp.com"
+    "https://master.d2354zwtwk5j2x.amplifyapp.com",
+    "https://geniehub.duckdns.org"
 ]
+
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 APPEND_SLASH=False
