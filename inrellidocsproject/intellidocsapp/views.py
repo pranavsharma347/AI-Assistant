@@ -20,7 +20,7 @@ from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_community.document_loaders import UnstructuredURLLoader
 from langchain_community.vectorstores import FAISS
-from langchain.chains import RetrievalQAWithSourcesChain
+from langchain.chains import RetrievalQAWithSourcesChain,RetrievalQA
 from langchain.agents import initialize_agent, Tool
 from langchain_community.tools import DuckDuckGoSearchRun
 from rest_framework.parsers import JSONParser
@@ -105,121 +105,225 @@ class Docs(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
-class MultiDocs(APIView):
 
-    serializer_class = MultiFileUploadSerializer  # without this no file upload form and Question submit not show on browser
+class MultiDocs(APIView):
+    serializer_class = MultiFileUploadSerializer
     parser_classes = (MultiPartParser, FormParser)
 
-    def post(self,request):
-        # Step 1: Convert request.FILES into a list structure serializer expects
-        files_list = request.FILES.getlist('files_uploaded')
+    def post(self, request):
 
-                # Step 2: Manually prepare data for serializer
-        data = {
-            'files_uploaded': files_list,
-            'question': request.data.get('question')
-        }
+        # 🧩 Step 1: Validate Input
+        try:
+            files_list = request.FILES.getlist('files_uploaded')
+            data = {
+                'files_uploaded': files_list,
+                'question': request.data.get('question')
+            }
+            serializer = MultiFileUploadSerializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            uploaded_files = serializer.validated_data['files_uploaded']
+            user_question = serializer.validated_data['question']
 
-        serializer=MultiFileUploadSerializer(data=data)
-        if serializer.is_valid():
-            uploaded_file = serializer.validated_data['files_uploaded']
-            user_question=serializer.validated_data['question']
+        except Exception as e:
+            print("⚠️ Serializer Error:", e)
+            return Response(
+                {
+                    "error": "Please upload valid PDF files and enter your question.",
+                    "error_type": "input_error"
+                },
+                status=400
+            )
 
-            docs = ""
-            for f in uploaded_file:
+        # 📄 Step 2: Read & Extract Text from PDFs
+        try:
+            docs_text = ""
+            for f in uploaded_files:
                 pdf_reader = PdfReader(f)
                 for page in pdf_reader.pages:
-                    docs += page.extract_text() or ""
-            
-            doc_obj = [Document(page_content=docs)]
+                    docs_text += page.extract_text() or ""
 
-            splitter = RecursiveCharacterTextSplitter(
-                chunk_size=10000,    # ≈ 2000 tokens (safe)
-                chunk_overlap=1000,  # thoda overlap for context
+            if not docs_text.strip():
+                return Response(
+                    {
+                        "error": "Uploaded PDFs have no readable content. Try with different files.",
+                        "error_type": "no_content"
+                    },
+                    status=400
                 )
-        
-            #splits the documents into chunks
-            splits = splitter.split_documents(doc_obj)#always take document object not a string
 
-            # make emdding vector this chunks and store in chroma db
+            doc_obj = [Document(page_content=docs_text)]
+
+        except Exception as e:
+            print("📄 PDF Read Error:", e)
+            return Response(
+                {
+                    "error": "Unable to read the uploaded PDFs. Please upload valid documents.",
+                    "error_type": "pdf_read_error"
+                },
+                status=500
+            )
+
+        # 🧠 Step 3: Create Embeddings + Vector Store
+        try:
+            splitter = RecursiveCharacterTextSplitter(
+                chunk_size=10000,
+                chunk_overlap=1000
+            )
+            splits = splitter.split_documents(doc_obj)
+
             emb = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
-
-            # Step 3: Create Chroma vector store in memory
-            vectorstore = Chroma.from_documents(
-                documents=splits,
-                  embedding=emb,
-                  collection_name="multipdf_collection"
-                  )
-            # Step 4: Convert vectorstore into a retriever and i want similar or top two results based on query
+            vectorstore = Chroma.from_documents(splits, emb, collection_name="multi_pdf_store")
             retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
 
-            
+        except Exception as e:
+            print("🧩 Embedding Error:", e)
+            return Response(
+                {
+                    "error": "System failed to process your documents. Please retry later.",
+                    "error_type": "embedding_error"
+                },
+                status=500
+            )
 
-
-            #now we use LLM model
-            llm=init_chat_model("gemini-2.5-flash", model_provider="google_genai")
-
+        # 🤖 Step 4: Initialize LLM
+        try:
+            llm = init_chat_model("gemini-2.5-flash", model_provider="google_genai")
             prompt = PromptTemplate(
                 template="""
                 You are a helpful assistant.
                 Answer ONLY from the provided transcript context.
-                If the context is insufficient, just say you don't know.
+                If the context is insufficient, just say: "I don't know the answer based on uploaded files.Please try with different question".
 
                 {context}
                 Question: {question}
                 """,
-                input_variables = ['context', 'question']
+                input_variables=["context", "question"]
             )
-            parser=StrOutputParser()
+            parser = StrOutputParser()
 
-            # question= "What is data structure and explain its types?"
-            retrieved_docs    = retriever.invoke(user_question)
+        except Exception as e:
+            print("🤖 LLM Init Error:", e)
+            return Response(
+                {
+                    "error": "AI system failed to initialize. Please try again after a few seconds.",
+                    "error_type": "llm_init_error"
+                },
+                status=500
+            )
+
+        # 💬 Step 5: Retrieve Context + Generate Answer
+        try:
+            retrieved_docs = retriever.invoke(user_question)
+            if not retrieved_docs:
+                return Response(
+                    {
+                        "error": "No matching information found in uploaded PDFs.",
+                        "error_type": "no_relevant_content"
+                    },
+                    status=404
+                )
+
             context_text = "\n\n".join(doc.page_content for doc in retrieved_docs)
-            chain=prompt|llm|parser
+            chain = prompt | llm | parser
 
-            answer = chain.invoke({"context": context_text,
-                                    "question":  user_question
-                                    })
-            
+            answer = chain.invoke({
+                "context": context_text,
+                "question": user_question
+            })
 
+            return Response({"answer": answer}, status=200)
 
-            return Response({"answer": answer},status=status.HTTP_200_OK)
-
-        return Response({"answer":"Question related answer is not found please try again"},status=status.HTTP_200_OK)
-    
+        except Exception as e:
+            print("💥 Answer Generation Error:", e)
+            return Response(
+                {
+                    "error": "Something went wrong while generating answer. Please try again.",
+                    "error_type": "generation_error"
+                },
+                status=500
+            )
 
 
 class MultiUrls(APIView):
-    def post(self,request):
+    def post(self, request):
         serializer = MultiURLQuestionSerializer(data=request.data)
-        if serializer.is_valid():
-            urls = serializer.validated_data["urls"]
-            question = serializer.validated_data["question"]
+        if not serializer.is_valid():
+            return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
+        urls = serializer.validated_data["urls"]
+        question = serializer.validated_data["question"]
 
-            print(urls)
-            print(question)
+        print("Incoming URLs:", urls)
+        print("Question:", question)
 
-            loader=UnstructuredURLLoader(urls=urls)
-            data=loader.load()
+        try:
+            # Step 1: Load content from URLs
+            try:
+                loader = UnstructuredURLLoader(urls=urls)
+                data = loader.load()
+            except Exception as e:
+                print("❌ URL Loader Error:", e)
+                return Response({"error": "Failed to load one or more URLs","error_type": "error in url"}, status=400)
 
-            splitter = RecursiveCharacterTextSplitter(chunk_size=1000,    # ≈ 2000 tokens (safe)
-                chunk_overlap=200)  # thoda overlap for context
-            docs=splitter.split_documents(data)#here these documents now divide into chunks
-            
-            #now we create embedding of these chunks
+            # Step 2: Split data
+            splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+            docs = splitter.split_documents(data)
+
+            if not docs:
+                return Response({"error": "Failed to handle urls","error_type": "Failed to handle urls"}, status=404)
+
+            # Step 3: Embeddings + Vector Store
             emb = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
-            vector_store = FAISS.from_documents(docs,emb)#it only converts documents into embedding not store on the disk
-            vector_store.save_local("langchain_faiss_index")#now it is locally stored on disk by creating folder
-            new_vs = FAISS.load_local("langchain_faiss_index", emb, allow_dangerous_deserialization=True)#Now load embinng we already saved
-            llm=init_chat_model("gemini-2.5-flash", model_provider="google_genai")
-            chain=RetrievalQAWithSourcesChain.from_llm(llm=llm,retriever=new_vs.as_retriever())
-            parser=StrOutputParser()
-            answer=chain.invoke({"question":question})
-            return Response({"answer":answer}, status=status.HTTP_200_OK)
-    
-        return Response({"answer":"Question related answer is not found please try again"},status=status.HTTP_200_OK)
+            try:
+                vector_store = FAISS.from_documents(docs, emb)
+                vector_store.save_local("langchain_faiss_index")
+                new_vs = FAISS.load_local("langchain_faiss_index", emb, allow_dangerous_deserialization=True)
+            except Exception as e:
+                print("❌ FAISS Error:", e)
+                return Response({"error": "Error creating or loading FAISS index","error_type": "error in FAISS index"}, status=500)
+             
+        
+            # Step 4: LLM + Chain
+            llm = init_chat_model("gemini-2.5-flash", model_provider="google_genai")
 
+            template = """
+                        You are a helpful assistant.
+                        Answer ONLY from the provided context below.
+                        If the context does not contain the answer, simply say: 
+                        "Answer of this question is not available in the provided urls"
+
+                        Context:
+                        {context}
+
+                        Question:
+                        {question}
+
+                        Answer:
+                        """
+            
+            prompt = PromptTemplate(
+                                    template=template,
+                                    input_variables=["context", "question"]
+                                 )
+            
+            # chain = RetrievalQAWithSourcesChain.from_llm(llm=llm, retriever=new_vs.as_retriever(),chain_type_kwargs={"prompt": prompt})
+            chain = RetrievalQA.from_chain_type(
+                            llm=llm,
+                            retriever=new_vs.as_retriever(),
+                            chain_type="stuff",   # default type
+                            chain_type_kwargs={"prompt": prompt}
+                            )
+            
+            answer=chain.invoke({"query": question})
+            result = answer.get("result", "Answer of this question is not available in the provided urls.Please try with question realted to url context.")
+            return Response({"answer": result}, status=200)
+
+        except Exception as e:
+            import traceback
+            print("🔥 Unexpected Error:", e)
+            print(traceback.format_exc())
+            print("error",str(e))
+            return Response({"answer": "Some thing goes wrong please try again "}, status=500)
 
 
 
@@ -301,14 +405,23 @@ class AIGenerator(APIView):
 
     def post(self,request):
         serializer=AIGeneratorSerializer(data=request.data)
-        if serializer.is_valid():
-            question=serializer.validated_data['question']
-            print("serialzer",serializer)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        question=serializer.validated_data['question']
+        try:
             llm = init_chat_model("gemini-2.5-flash", model_provider="google_genai")
             parser=StrOutputParser()
             chain=llm|parser
             output=chain.invoke(question)
             return Response({"result":output},status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:  
+            print("💥 Answer Generation Error:", e)
+            return Response(
+                {
+                    "error": "Something went wrong while generating answer. Please try again.",
+                    "error_type": "generation_error"
+                },
+                status=500
+            )
 
             

@@ -44,3 +44,7 @@ Thumbs.db
 # Temporary and debug
 tmp/
 logs/
+
+
+#Emedding 
+langchain_faiss_index/

@@ -9,7 +9,7 @@ class FileQuestionSerializer(serializers.Serializer):
 
 #for uploading multiple file here ListFiled+Field take multiple for upload
 class MultiFileUploadSerializer(serializers.Serializer):
-    file_uploaded = serializers.ListField(
+    files_uploaded = serializers.ListField(
         child=serializers.FileField(),
         allow_empty=False
     )

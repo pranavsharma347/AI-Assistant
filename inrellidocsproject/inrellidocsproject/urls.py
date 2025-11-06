@@ -21,7 +21,7 @@ from intellidocsapp import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('postDoc/',views.Docs.as_view()),
-    path('MultiDoc/',views.MultiDocs.as_view()),
+    path('MultiDocs/',views.MultiDocs.as_view()),
     path('MultiUrls/',views.MultiUrls.as_view()),
     path("DocsAiAgent/",views.DocsAiAgent.as_view()),
     path("AIGenerator/",views.AIGenerator.as_view()),
