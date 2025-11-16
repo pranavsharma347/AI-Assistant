@@ -5,7 +5,9 @@ sys.modules['sqlite3'] = pysqlite3
 from django.shortcuts import render
 from rest_framework.views import APIView
 from dotenv import load_dotenv
-from langchain.text_splitter import RecursiveCharacterTextSplitter,TokenTextSplitter
+# from langchain.text_splitter import RecursiveCharacterTextSplitter,TokenTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 from langchain_core.output_parsers import StrOutputParser
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.chat_models import init_chat_model
@@ -20,14 +22,16 @@ from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_community.document_loaders import UnstructuredURLLoader
 from langchain_community.vectorstores import FAISS
-from langchain.chains import RetrievalQAWithSourcesChain,RetrievalQA
-from langchain.agents import initialize_agent, Tool
+from langchain_classic.chains import RetrievalQAWithSourcesChain,RetrievalQA
+from langchain_classic.agents import initialize_agent,Tool
 from langchain_community.tools import DuckDuckGoSearchRun
 from rest_framework.parsers import JSONParser
+import boto3
+import json
 
 
 
-import langchain
+# import langchain
 
 load_dotenv()
 
@@ -424,4 +428,69 @@ class AIGenerator(APIView):
                 status=500
             )
 
-            
+
+class TestLambdaPDF(APIView):
+    def post(self, request):
+        # 🧩 Step 1: Validate Input
+        try:
+            files_list = request.FILES.getlist('files_uploaded')
+            data = {
+                'files_uploaded': files_list,
+                'question': request.data.get('question')
+            }
+            serializer = MultiFileUploadSerializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            uploaded_files = serializer.validated_data['files_uploaded']
+            user_question = serializer.validated_data['question']
+
+        except Exception as e:
+            print("⚠️ Serializer Error:", e)
+            return Response(
+                {
+                    "error": "Please upload valid PDF files and enter your question.",
+                    "error_type": "input_error"
+                },
+                status=400
+            )
+        
+        try:
+            s3 = boto3.client('s3', region_name='ap-south-1')
+            bucket_name = 'geniehub-docs-bucket'
+
+            uploaded_file_keys = []
+            for file_obj in files_list:
+                s3_key = f"geniehub-docs-bucket/pdf/{file_obj.name}"
+                s3.upload_fileobj(file_obj, bucket_name, s3_key)
+                uploaded_file_keys.append(s3_key)
+
+            # ab Lambda call karo (file list + question ke sath)
+            lambda_client = boto3.client('lambda', region_name='ap-south-1')
+
+            payload = {
+                "bucket": bucket_name,
+                "files": uploaded_file_keys,
+                "question": user_question
+            }
+
+            response = lambda_client.invoke(
+                FunctionName='pdf-lambda-handler',
+                InvocationType='RequestResponse',
+                Payload=json.dumps(payload)
+            )
+
+            result = json.load(response['Payload'])
+            body = json.loads(result["body"])
+            answer = body["answer"]
+        except Exception as e:
+            print("💥 Lambda Invocation Error:", e)
+            return Response(
+                {
+                    "error": "Something went wrong while invoking Lambda. Please try again.",
+                    "error_type": "lambda_invocation_error"
+                },
+                status=500
+            )
+        
+        return Response({"message": "Files uploaded and Lambda invoked successfully.", "answer": answer}, status=200)
+
+
