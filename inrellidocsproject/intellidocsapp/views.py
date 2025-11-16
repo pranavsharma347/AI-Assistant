@@ -446,7 +446,7 @@ class TestLambdaPDF(APIView):
         except Exception as e:
             print("⚠️ Serializer Error:", e)
             return Response(
-                {
+                {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
                     "error": "Please upload valid PDF files and enter your question.",
                     "error_type": "input_error"
                 },
@@ -464,7 +464,7 @@ class TestLambdaPDF(APIView):
                 uploaded_file_keys.append(s3_key)
 
             # ab Lambda call karo (file list + question ke sath)
-            lambda_client = boto3.client('lambda', region_name='ap-south-1')
+            lambda_client = boto3.client('lambda', region_name='eu-north-1')
 
             payload = {
                 "bucket": bucket_name,
@@ -473,12 +473,13 @@ class TestLambdaPDF(APIView):
             }
 
             response = lambda_client.invoke(
-                FunctionName='pdf-lambda-handler',
+                FunctionName='process_lambda_handler',
                 InvocationType='RequestResponse',
                 Payload=json.dumps(payload)
             )
 
             result = json.load(response['Payload'])
+            print("result from lambda",result)
             body = json.loads(result["body"])
             answer = body["answer"]
         except Exception as e:
