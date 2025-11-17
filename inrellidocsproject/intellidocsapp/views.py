@@ -430,6 +430,14 @@ class AIGenerator(APIView):
 
 
 class TestLambdaPDF(APIView):
+
+    def options(self, request, *args, **kwargs):
+        response = Response(status=200)
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        return response
+        
     def post(self, request):
         # 🧩 Step 1: Validate Input
         try:
