@@ -5,9 +5,7 @@ sys.modules['sqlite3'] = pysqlite3
 from django.shortcuts import render
 from rest_framework.views import APIView
 from dotenv import load_dotenv
-# from langchain.text_splitter import RecursiveCharacterTextSplitter,TokenTextSplitter
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
 from langchain_core.output_parsers import StrOutputParser
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.chat_models import init_chat_model
@@ -29,9 +27,6 @@ from rest_framework.parsers import JSONParser
 import boto3
 import json
 
-
-
-# import langchain
 
 load_dotenv()
 
