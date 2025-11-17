@@ -20,7 +20,7 @@ from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_community.document_loaders import UnstructuredURLLoader
 from langchain_community.vectorstores import FAISS
-from langchain_classic.chains import RetrievalQAWithSourcesChain,RetrievalQA
+from langchain_classic.chains import RetrievalQA
 from langchain_classic.agents import initialize_agent,Tool
 from langchain_community.tools import DuckDuckGoSearchRun
 from rest_framework.parsers import JSONParser
