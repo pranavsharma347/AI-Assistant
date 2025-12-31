@@ -296,7 +296,9 @@ class PasswordResetEmail(generics.GenericAPIView):
             #now we create a token for the user
             token=PasswordResetTokenGenerator().make_token(user)
             # verify_url = f"http://localhost:5174/reset-password/{uidb64}/{token}"
-            verify_url = f"{settings.FRONTEND_URL}/reset-password/{uidb64}/{token}"
+            # verify_url = f"{settings.FRONTEND_URL}/reset-password/{uidb64}/{token}"
+            verify_url = f"{settings.FRONTEND_URL}/reset-password?uidb64={uidb64}&token={token}"
+
             # ✅ Email body (HTML)
             email_body = email_reset_password_body(user.email, verify_url)
 
@@ -316,8 +318,10 @@ class PasswordResetEmail(generics.GenericAPIView):
 class PasswordCheckTokenAPI(generics.GenericAPIView):
     Serializer_class=PasswordTokenCheckApiSerializer
 
-    def get(self,request,uidb64,token):#remember here we pass uid64,token then we have to pass in url
+    def get(self,request):#remember here we pass uid64,token then we have to pass in url
         try:
+            uidb64 = request.GET.get('uidb64')
+            token = request.GET.get('token')
             id=smart_str(urlsafe_base64_decode(uidb64))
             print('id',id)
             user=CustomUser.objects.get(id=id)

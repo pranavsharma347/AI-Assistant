@@ -10,7 +10,8 @@ urlpatterns = [
     path('login/',LoginAPI.as_view(),name='login'),
     path('changepassword/',ChangePassword.as_view(),name='changepassword'),
     path('password-reset-email/',PasswordResetEmail.as_view(),name='request-reset-email'),
-    path('password-reset/<uidb64>/<token>/',PasswordCheckTokenAPI.as_view(),name='password-reset-confirm'),
+    # path('password-reset/<uidb64>/<token>/',PasswordCheckTokenAPI.as_view(),name='password-reset-confirm'),
+    path("password-reset/",PasswordCheckTokenAPI.as_view(),name="password-reset-complete"),
     path('password-reset-complete/',SetNewPasswordAPIView.as_view(),name='password-reset-complete'),
     path('google-login/', GoogleLoginAPI.as_view(), name='google-login'),
 
