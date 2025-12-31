@@ -1,6 +1,6 @@
 import sys
-import pysqlite3
-sys.modules['sqlite3'] = pysqlite3
+# import pysqlite3
+# sys.modules['sqlite3'] = pysqlite3
 
 from django.shortcuts import render
 from rest_framework.views import APIView
@@ -24,6 +24,8 @@ from langchain_classic.chains import RetrievalQA
 from langchain_classic.agents import initialize_agent,Tool
 from langchain_community.tools import DuckDuckGoSearchRun
 from rest_framework.parsers import JSONParser
+from rest_framework.permissions import IsAuthenticated
+
 import boto3
 import json
 
@@ -36,10 +38,12 @@ load_dotenv()
 class Docs(APIView):
     serializer_class = FileQuestionSerializer  # without this no file upload form and Question submit not show on browser
     parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [IsAuthenticated]
+
 
     def post(self, request):
         serializer = FileQuestionSerializer(data=request.data)
-        print("seralizer",serializer)
+        print("seralissssssszer",serializer)
         if serializer.is_valid():
             uploaded_file = serializer.validated_data['file_uploaded']
             user_question=serializer.validated_data['question']
@@ -108,6 +112,8 @@ class Docs(APIView):
 class MultiDocs(APIView):
     serializer_class = MultiFileUploadSerializer
     parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [IsAuthenticated]
+
 
     def post(self, request):
 
@@ -244,6 +250,8 @@ class MultiDocs(APIView):
 
 
 class MultiUrls(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         serializer = MultiURLQuestionSerializer(data=request.data)
         if not serializer.is_valid():
@@ -330,6 +338,8 @@ class MultiUrls(APIView):
 class DocsAiAgent(APIView):
     serializer_class = FileQuestionSerializer  # without this no file upload form and Question submit not show on browser
     parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [IsAuthenticated]
+
 
     def post(self, request):
         serializer = FileQuestionSerializer(data=request.data)
@@ -401,6 +411,8 @@ class DocsAiAgent(APIView):
 class AIGenerator(APIView):
     serializer_class=AIGeneratorSerializer
     parser_classes = (FormParser,JSONParser)#form paresr for accept data from html
+    permission_classes = [IsAuthenticated]
+
 
     def post(self,request):
         serializer=AIGeneratorSerializer(data=request.data)
@@ -424,7 +436,9 @@ class AIGenerator(APIView):
             )
 
 
-class TestLambdaPDF(APIView):        
+class TestLambdaPDF(APIView):  
+    permission_classes = [IsAuthenticated]
+      
     def post(self, request):
         # 🧩 Step 1: Validate Input
         try:
@@ -490,3 +504,56 @@ class TestLambdaPDF(APIView):
         return Response({"message": "Files uploaded and Lambda invoked successfully.", "answer": answer}, status=200)
 
 
+class TestLambdaURL(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            serializer = MultiURLQuestionSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            urls = serializer.validated_data["urls"]
+            question = serializer.validated_data["question"]
+
+            print("Incoming URLs:", urls)
+            print("Question:", question)
+        except Exception as e:
+            print("⚠️ Serializer Error:", e)
+            return Response(
+                {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+                    "error": "Please upload valid urls and enter your question.",
+                    "error_type": "input_error"
+                },
+                status=400
+            )
+        
+
+        try:
+            lambda_client = boto3.client('lambda', region_name='eu-north-1')
+
+            payload = {
+                "urls": urls,
+                "question": question
+            }
+
+            response = lambda_client.invoke(
+                FunctionName='url_lambda_handler',
+                InvocationType='RequestResponse',
+                Payload=json.dumps(payload)
+            )
+
+            result = json.load(response['Payload'])
+            print("result from lambda",result)
+            body = json.loads(result["body"])
+            answer = body["answer"]
+        except Exception as e:
+            print("💥 Lambda Invocation Error:", e)
+            return Response(
+                {
+                    "error": "Something went wrong while invoking Lambda. Please try again.",
+                    "error_type": "lambda_invocation_error"
+                },
+                status=500
+            )
+        
+        return Response({"message": "Lambda invoked successfully.", "answer": answer}, status=200)
+    

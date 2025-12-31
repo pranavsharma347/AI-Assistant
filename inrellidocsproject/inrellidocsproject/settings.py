@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 import os
 from pathlib import Path
+from datetime import timedelta
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -32,7 +33,7 @@ ALLOWED_HOSTS = [
     "ec2-13-48-104-182.eu-north-1.compute.amazonaws.com",
     "master.d2354zwtwk5j2x.amplifyapp.com",
     "geniehub.duckdns.org"
-]# Application definition
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -44,9 +45,34 @@ INSTALLED_APPS = [
      'rest_framework',
      'intellidocsapp',
     "corsheaders",
-
+    'users',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
+    'rest_framework.authtoken'
 
 ]
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+}
+
+GOOGLE_CLIENT_ID = "951669499604-ksn04tlrvg3sm6ueb8p0tfus8mnt9fuu.apps.googleusercontent.com"
+
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+
+    # 'ROTATE_REFRESH_TOKENS': True,   # security
+    # 'BLACKLIST_AFTER_ROTATION': True,
+    'ROTATE_REFRESH_TOKENS': False,
+
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -103,12 +129,45 @@ APPEND_SLASH=False
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases```````````````````````````````
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     },
+#         'users_db': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': 'intellidocs',    
+#         'USER': 'postgres',       
+#         'PASSWORD': 'pranav',
+#         'HOST': '127.0.0.1',
+#         'PORT': '5432',
+#     }
+# }
+
 DATABASES = {
     'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'intellidocs',
+        'USER': 'postgres',
+        'PASSWORD': 'KyE5D3fmDG2vbwb5kkLb',
+        'HOST': 'intellidocs.c182m4kki6zj.eu-north-1.rds.amazonaws.com',
+        'PORT': '5432',
+    },
+
+    'vector_db': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': BASE_DIR / 'vector.sqlite3',
     }
 }
+
+AUTH_USER_MODEL = 'users.CustomUser'
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 100  # 100 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 100  # 100 MB
+
+FRONTEND_URL = "https://master.d2354zwtwk5j2x.amplifyapp.com"
+
+
 
 
 # Password validation
@@ -116,10 +175,10 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,
+        } 
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -127,6 +186,16 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+    {
+        'NAME': 'users.services.passwordValidators.UppercaseValidator', 
+    },
+    {
+        'NAME': 'users.services.passwordValidators.LowercaseValidator', 
+    },
+    {
+        'NAME': 'users.services.passwordValidators.SymbolValidator', 
+    },
+
 ]
 
 
@@ -154,3 +223,12 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST='smtp.gmail.com'
+EMAIL_PORT=587
+EMAIL_HOST_USER='sharma.pranav9000@gmail.com'
+EMAIL_HOST_PASSWORD='mncmujrknvruyqzw'
+EMAIL_USE_TLS = True

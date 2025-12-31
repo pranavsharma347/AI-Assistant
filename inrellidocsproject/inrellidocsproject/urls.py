@@ -26,6 +26,8 @@ urlpatterns = [
     path("DocsAiAgent/",views.DocsAiAgent.as_view()),
     path("AIGenerator/",views.AIGenerator.as_view()),
     path('testlambda/', views.TestLambdaPDF.as_view(), name='test-lambda'),
-    path('api-auth/', include('rest_framework.urls'))
+    path('api-auth/', include('rest_framework.urls')),
+    path('user/',include('users.urls')),
+
 
 ]
